@@ -102,11 +102,56 @@
     header { background: white !important; color: black !important; border: 2px solid #2e7d32; }
   }
   @media (max-width: 640px) {
-    td.unit-cell { display: none; }
-    thead th.unit-th { display: none; }
-    header h1 { font-size: 1.4rem; }
-    td input { font-size: 0.85rem; padding: 4px 6px; }
+    body { padding: 8px; }
+    header { padding: 18px; }
+    header h1 { font-size: 1.35rem; }
+    header p { font-size: 0.85rem; }
+    .controls button { font-size: 0.82rem; padding: 7px 10px; }
+    .summary { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-card { padding: 10px; }
+    .stat-card .value { font-size: 1.15rem; }
+    thead { display: none; }
+    table, tbody { display: block; width: 100%; }
+    tbody tr {
+      display: grid;
+      grid-template-columns: 28px 50px auto 1fr auto 28px;
+      grid-template-rows: auto auto;
+      grid-template-areas:
+        "check photo name  name  name     remove"
+        "check photo qty   price subtotal remove";
+      column-gap: 6px;
+      row-gap: 4px;
+      padding: 10px 4px;
+      align-items: center;
+    }
+    tbody tr td { padding: 0; width: auto !important; display: block; }
+    td.checkbox-cell { grid-area: check; align-self: center; }
+    td.photo-cell { grid-area: photo; align-self: center; }
+    td:nth-child(3) { grid-area: name; }
+    td:nth-child(3) input { font-weight: 600; font-size: 0.95rem; padding: 4px 6px; }
+    td.qty-cell { grid-area: qty; display: flex !important; align-items: center; gap: 4px; }
+    td.qty-cell::before { content: "Qtd"; color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.3px; }
+    td.qty-cell input { width: 48px; padding: 3px 5px; font-size: 0.85rem; text-align: center; }
+    td.price-cell { grid-area: price; display: flex !important; align-items: center; gap: 4px; justify-self: center; }
+    td.price-cell::before { content: "R$"; color: var(--muted); font-size: 0.7rem; text-transform: uppercase; }
+    td.price-cell input { width: 64px; padding: 3px 5px; font-size: 0.85rem; text-align: center; }
+    td.subtotal-cell { grid-area: subtotal; justify-self: end; padding-right: 6px; font-weight: 700; font-size: 0.92rem; }
+    td.action-cell { grid-area: remove; align-self: center; }
+    td.unit-cell { display: none !important; }
+    .photo-thumb, .photo-placeholder { width: 42px; height: 42px; font-size: 1.2rem; }
+    .category-header { padding: 12px 14px; }
+    .category-header h2 { font-size: 1rem; }
+    .category-total { font-size: 0.78rem; padding: 3px 8px; }
+    .month-selector { gap: 6px; font-size: 0.85rem; }
+    .month-selector input { padding: 6px 8px; font-size: 0.9rem; }
+  }
+  @media (max-width: 380px) {
+    tbody tr { grid-template-columns: 24px 44px auto 1fr auto 24px; column-gap: 4px; }
     .photo-thumb, .photo-placeholder { width: 38px; height: 38px; }
+    td.qty-cell input { width: 42px; }
+    td.price-cell input { width: 56px; }
+    td.subtotal-cell { font-size: 0.85rem; }
+    td:nth-child(3) input { font-size: 0.9rem; }
   }
 </style>
 </head>
@@ -544,69 +589,4 @@ function exportCSV() {
     c.items.forEach(it => {
       if (!it.name) return;
       const sub = (Number(it.qty) || 0) * (Number(it.price) || 0);
-      rows.push([cat, it.name, it.qty, it.unit, (Number(it.price)||0).toFixed(2), sub.toFixed(2), it.purchased ? "Sim" : "Não"]);
-    });
-  });
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
-  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `feira_${document.getElementById("monthInput").value || "lista"}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-const monthInput = document.getElementById("monthInput");
-const budgetInput = document.getElementById("budgetInput");
-const savedMonth = localStorage.getItem(MONTH_KEY);
-const savedBudget = localStorage.getItem(BUDGET_KEY);
-if (savedMonth) monthInput.value = savedMonth;
-else { const d = new Date(); monthInput.value = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); }
-if (savedBudget) budgetInput.value = savedBudget;
-monthInput.addEventListener("change", () => localStorage.setItem(MONTH_KEY, monthInput.value));
-budgetInput.addEventListener("change", () => localStorage.setItem(BUDGET_KEY, budgetInput.value));
-
-render();
-
-// ============ PWA ============
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(err => console.warn("SW falhou:", err));
-  });
-}
-
-let deferredInstallPrompt = null;
-window.addEventListener("beforeinstallprompt", (e) => {
-  e.preventDefault();
-  deferredInstallPrompt = e;
-  showInstallButton();
-});
-
-function showInstallButton() {
-  if (document.getElementById("installAppBtn")) return;
-  const btn = document.createElement("button");
-  btn.id = "installAppBtn";
-  btn.className = "btn-primary";
-  btn.textContent = "📱 Instalar app";
-  btn.onclick = async () => {
-    if (!deferredInstallPrompt) return;
-    deferredInstallPrompt.prompt();
-    const { outcome } = await deferredInstallPrompt.userChoice;
-    deferredInstallPrompt = null;
-    btn.remove();
-    if (outcome === "accepted") {
-      setTimeout(() => alert("✓ App instalado! Procure o ícone na tela inicial."), 500);
-    }
-  };
-  document.body.appendChild(btn);
-}
-
-window.addEventListener("appinstalled", () => {
-  const b = document.getElementById("installAppBtn");
-  if (b) b.remove();
-});
-</script>
-</body>
-</html>
-                                                                                                                                                                                     
+      rows.push([cat, it.name, it.qty, it.unit, (Number(it.price)||0).t
