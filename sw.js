@@ -1,11 +1,12 @@
-const CACHE_NAME = 'lista-feira-v1';
+const CACHE_NAME = 'lista-feira-v2';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
-  './apple-touch-icon.png'
+  './apple-touch-icon.png',
+  './favicon-64.png'
 ];
 
 self.addEventListener('install', (e) => {
