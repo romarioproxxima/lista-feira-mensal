@@ -249,7 +249,6 @@
     z-index: 999;
   }
   .auto-save-indicator.show { opacity: 1; }
-  /* Modal */
   .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -369,7 +368,6 @@
 
 <div id="categories"></div>
 
-<!-- Modal de imagem -->
 <div class="modal-backdrop" id="photoModal">
   <div class="modal">
     <h3 id="photoModalTitle">Foto do item</h3>
@@ -487,13 +485,12 @@ const BUDGET_KEY = "feira_mensal_budget";
 const MONTH_KEY = "feira_mensal_month";
 
 let data = loadData();
-let activePhotoTarget = null; // { cat, idx }
+let activePhotoTarget = null;
 
 function loadData() {
   try {
     let saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) {
-      // Migra do v1 (sem campo image) pro v2 (com image)
       saved = localStorage.getItem(LEGACY_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -537,4 +534,317 @@ function render() {
   container.innerHTML = "";
   let totalItems = 0, purchasedItems = 0, totalEstimated = 0, totalSpent = 0;
 
-  Object.entries(da
+  Object.entries(data).forEach(([catName, cat]) => {
+    const catTotal = cat.items.reduce((s, it) => {
+      const sub = (Number(it.qty) || 0) * (Number(it.price) || 0);
+      return s + sub;
+    }, 0);
+    totalEstimated += catTotal;
+
+    cat.items.forEach(it => {
+      if (it.name && it.name.trim()) {
+        totalItems++;
+        if (it.purchased) {
+          purchasedItems++;
+          totalSpent += (Number(it.qty) || 0) * (Number(it.price) || 0);
+        }
+      }
+    });
+
+    const section = document.createElement("section");
+    section.className = "category";
+    section.innerHTML = `
+      <div class="category-header" onclick="toggleCategory(this)">
+        <h2><span class="category-icon">${cat.icon}</span>${catName}</h2>
+        <span class="category-total">${fmtBRL(catTotal)}</span>
+      </div>
+      <div class="category-body">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Foto</th>
+              <th>Item</th>
+              <th>Qtd</th>
+              <th class="unit-th">Un</th>
+              <th>Preço (R$)</th>
+              <th style="text-align:right;padding-right:12px;">Subtotal</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="add-row">
+          <button onclick="addItem('${catName.replace(/'/g, "\\'")}')">+ Adicionar item</button>
+        </div>
+      </div>
+    `;
+    const tbody = section.querySelector("tbody");
+    cat.items.forEach((it, idx) => {
+      const tr = document.createElement("tr");
+      if (it.purchased) tr.classList.add("purchased");
+      const subtotal = (Number(it.qty) || 0) * (Number(it.price) || 0);
+      const photoCell = it.image
+        ? `<img src="${it.image}" class="photo-thumb" alt="foto" onclick="openPhotoModal('${catName.replace(/'/g, "\\'")}', ${idx})">`
+        : `<div class="photo-placeholder" onclick="openPhotoModal('${catName.replace(/'/g, "\\'")}', ${idx})" title="Adicionar foto">+</div>`;
+      tr.innerHTML = `
+        <td class="checkbox-cell"><input type="checkbox" ${it.purchased ? "checked" : ""} data-cat="${catName}" data-idx="${idx}" data-field="purchased"></td>
+        <td class="photo-cell">${photoCell}</td>
+        <td><input type="text" value="${escapeAttr(it.name || "")}" placeholder="Nome do item" data-cat="${catName}" data-idx="${idx}" data-field="name"></td>
+        <td class="qty-cell"><input type="number" min="0" step="0.01" value="${it.qty || ""}" data-cat="${catName}" data-idx="${idx}" data-field="qty"></td>
+        <td class="unit-cell"><input type="text" value="${escapeAttr(it.unit || "")}" placeholder="un" data-cat="${catName}" data-idx="${idx}" data-field="unit"></td>
+        <td class="price-cell"><input type="number" min="0" step="0.01" value="${it.price || ""}" placeholder="0,00" data-cat="${catName}" data-idx="${idx}" data-field="price"></td>
+        <td class="subtotal-cell">${fmtBRL(subtotal)}</td>
+        <td class="action-cell"><button class="remove-btn" onclick="removeItem('${catName.replace(/'/g, "\\'")}', ${idx})" title="Remover">×</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    container.appendChild(section);
+  });
+
+  document.getElementById("totalItems").textContent = totalItems;
+  document.getElementById("purchasedItems").textContent = purchasedItems;
+  document.getElementById("totalEstimated").textContent = fmtBRL(totalEstimated);
+  document.getElementById("totalSpent").textContent = fmtBRL(totalSpent);
+
+  container.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("change", onFieldChange);
+    if (inp.type !== "checkbox") inp.addEventListener("blur", onFieldChange);
+  });
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+function onFieldChange(e) {
+  const inp = e.target;
+  const cat = inp.dataset.cat;
+  const idx = Number(inp.dataset.idx);
+  const field = inp.dataset.field;
+  if (!cat || isNaN(idx) || !field) return;
+  let val;
+  if (field === "purchased") val = inp.checked;
+  else if (field === "qty" || field === "price") val = parseFloat(inp.value) || 0;
+  else val = inp.value;
+  data[cat].items[idx][field] = val;
+  saveData();
+  render();
+}
+
+function toggleCategory(headerEl) {
+  const body = headerEl.nextElementSibling;
+  body.classList.toggle("collapsed");
+}
+
+function addItem(catName) {
+  data[catName].items.push({ name: "", qty: 1, unit: "un", price: 0, image: "" });
+  saveData();
+  render();
+}
+
+function removeItem(catName, idx) {
+  if (!confirm("Remover este item?")) return;
+  data[catName].items.splice(idx, 1);
+  saveData();
+  render();
+}
+
+function resetCheckboxes() {
+  if (!confirm("Desmarcar todos os itens comprados?")) return;
+  Object.values(data).forEach(cat => cat.items.forEach(it => it.purchased = false));
+  saveData();
+  render();
+}
+
+function resetAll() {
+  if (!confirm("Apagar tudo e voltar à lista padrão? Esta ação não pode ser desfeita.\n\nDica: clique em 'Salvar Backup' antes para não perder seus dados.")) return;
+  data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  localStorage.removeItem(BUDGET_KEY);
+  document.getElementById("budgetInput").value = "";
+  saveData();
+  render();
+}
+
+function openPhotoModal(catName, idx) {
+  activePhotoTarget = { cat: catName, idx: idx };
+  const item = data[catName].items[idx];
+  document.getElementById("photoModalTitle").textContent = "Foto: " + (item.name || "(item sem nome)");
+  document.getElementById("photoModalSubtitle").textContent = item.image
+    ? "Esta é a foto atual. Substitua ou remova abaixo."
+    : "Tire uma foto ou escolha da galeria.";
+  const preview = document.getElementById("photoModalPreview");
+  if (item.image) {
+    preview.src = item.image;
+    preview.classList.add("show");
+    document.getElementById("removePhotoBtn").style.display = "flex";
+  } else {
+    preview.classList.remove("show");
+    document.getElementById("removePhotoBtn").style.display = "none";
+  }
+  document.getElementById("photoModal").classList.add("show");
+}
+
+function closePhotoModal() {
+  document.getElementById("photoModal").classList.remove("show");
+  activePhotoTarget = null;
+}
+
+function triggerCamera() {
+  document.getElementById("cameraInput").click();
+}
+
+function triggerGallery() {
+  document.getElementById("galleryInput").click();
+}
+
+async function handlePhotoUpload(event) {
+  const file = event.target.files[0];
+  event.target.value = "";
+  if (!file || !activePhotoTarget) return;
+  try {
+    const compressed = await compressImage(file);
+    data[activePhotoTarget.cat].items[activePhotoTarget.idx].image = compressed;
+    saveData();
+    closePhotoModal();
+    render();
+  } catch (e) {
+    alert("Erro ao processar imagem: " + e.message);
+  }
+}
+
+function removePhoto() {
+  if (!activePhotoTarget) return;
+  if (!confirm("Remover esta foto?")) return;
+  data[activePhotoTarget.cat].items[activePhotoTarget.idx].image = "";
+  saveData();
+  closePhotoModal();
+  render();
+}
+
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Falha ao ler o arquivo"));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Falha ao carregar imagem"));
+      img.onload = () => {
+        const maxSize = 240;
+        let w = img.width, h = img.height;
+        if (w > h && w > maxSize) { h = Math.round(h * maxSize / w); w = maxSize; }
+        else if (h > maxSize) { w = Math.round(w * maxSize / h); h = maxSize; }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.78));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById("photoModal").addEventListener("click", (e) => {
+  if (e.target.id === "photoModal") closePhotoModal();
+});
+
+function exportBackup() {
+  const backup = {
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    month: document.getElementById("monthInput").value || "",
+    budget: document.getElementById("budgetInput").value || "",
+    data: data
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const month = document.getElementById("monthInput").value || "lista";
+  const ts = new Date().toISOString().slice(0,10);
+  a.download = `backup_feira_${month}_${ts}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  alert("✓ Backup salvo! Guarde esse arquivo em local seguro.\n\nPara restaurar depois, clique em 'Restaurar Backup' e selecione esse arquivo.");
+}
+
+function importBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const backup = JSON.parse(e.target.result);
+      if (!backup.data || typeof backup.data !== "object") {
+        alert("❌ Arquivo de backup inválido. Verifique se é um arquivo JSON exportado por este app.");
+        return;
+      }
+      const ok = confirm(
+        "Restaurar este backup vai SUBSTITUIR sua lista atual.\n\n" +
+        "Backup do dia: " + (backup.exportedAt ? new Date(backup.exportedAt).toLocaleString("pt-BR") : "desconhecido") + "\n" +
+        "Mês: " + (backup.month || "—") + "\n\n" +
+        "Deseja continuar?"
+      );
+      if (!ok) { event.target.value = ""; return; }
+      data = backup.data;
+      Object.values(data).forEach(c => c.items.forEach(it => { if (!("image" in it)) it.image = ""; }));
+      saveData();
+      if (backup.month) {
+        document.getElementById("monthInput").value = backup.month;
+        localStorage.setItem(MONTH_KEY, backup.month);
+      }
+      if (backup.budget) {
+        document.getElementById("budgetInput").value = backup.budget;
+        localStorage.setItem(BUDGET_KEY, backup.budget);
+      }
+      render();
+      alert("✓ Backup restaurado com sucesso!");
+    } catch (err) {
+      alert("❌ Erro ao ler o backup: " + err.message);
+    }
+    event.target.value = "";
+  };
+  reader.readAsText(file);
+}
+
+function exportCSV() {
+  const rows = [["Categoria", "Item", "Qtd", "Unidade", "Preço (R$)", "Subtotal (R$)", "Comprado"]];
+  Object.entries(data).forEach(([cat, c]) => {
+    c.items.forEach(it => {
+      if (!it.name) return;
+      const sub = (Number(it.qty) || 0) * (Number(it.price) || 0);
+      rows.push([cat, it.name, it.qty, it.unit, (Number(it.price)||0).toFixed(2), sub.toFixed(2), it.purchased ? "Sim" : "Não"]);
+    });
+  });
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const month = document.getElementById("monthInput").value || "lista";
+  a.download = `feira_${month}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+const monthInput = document.getElementById("monthInput");
+const budgetInput = document.getElementById("budgetInput");
+const savedMonth = localStorage.getItem(MONTH_KEY);
+const savedBudget = localStorage.getItem(BUDGET_KEY);
+if (savedMonth) monthInput.value = savedMonth;
+else {
+  const d = new Date();
+  monthInput.value = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+}
+if (savedBudget) budgetInput.value = savedBudget;
+monthInput.addEventListener("change", () => localStorage.setItem(MONTH_KEY, monthInput.value));
+budgetInput.addEventListener("change", () => localStorage.setItem(BUDGET_KEY, budgetInput.value));
+
+render();
+</script>
+</body>
+</html>
