@@ -2,91 +2,41 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Lista de Feira Mensal</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2e7d32">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lista Feira">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #f7f8fa;
-    --card: #ffffff;
-    --primary: #2e7d32;
-    --primary-dark: #1b5e20;
-    --accent: #ff9800;
-    --danger: #d32f2f;
-    --info: #1976d2;
-    --text: #212121;
-    --muted: #757575;
-    --border: #e0e0e0;
-    --row-hover: #f1f8e9;
-    --done: #c8e6c9;
+    --bg: #f7f8fa; --card: #ffffff; --primary: #2e7d32; --primary-dark: #1b5e20;
+    --accent: #ff9800; --danger: #d32f2f; --info: #1976d2; --text: #212121;
+    --muted: #757575; --border: #e0e0e0; --row-hover: #f1f8e9; --done: #c8e6c9;
   }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    padding: 16px;
-    min-height: 100vh;
-  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 16px; min-height: 100vh; }
   .container { max-width: 1100px; margin: 0 auto; }
-  header {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    color: white;
-    padding: 24px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  }
+  header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
   header h1 { font-size: 1.8rem; margin-bottom: 6px; }
   header p { opacity: 0.9; font-size: 0.95rem; }
-  .month-selector {
-    margin-top: 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .month-selector input, .month-selector select {
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: none;
-    font-size: 1rem;
-    background: rgba(255,255,255,0.95);
-    color: var(--text);
-  }
-  .summary {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-  .stat-card {
-    background: var(--card);
-    padding: 16px;
-    border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    border-left: 4px solid var(--primary);
-  }
+  .month-selector { margin-top: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .month-selector input, .month-selector select { padding: 8px 12px; border-radius: 6px; border: none; font-size: 1rem; background: rgba(255,255,255,0.95); color: var(--text); }
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: var(--card); padding: 16px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); border-left: 4px solid var(--primary); }
   .stat-card .label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
   .stat-card .value { font-size: 1.5rem; font-weight: 700; color: var(--primary-dark); margin-top: 4px; }
   .stat-card.total { border-left-color: var(--accent); }
   .stat-card.total .value { color: var(--accent); }
   .stat-card.spent { border-left-color: var(--danger); }
   .stat-card.spent .value { color: var(--danger); }
-  .controls {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-  }
-  button {
-    padding: 9px 16px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.92rem;
-    font-weight: 600;
-    transition: all 0.15s;
-  }
+  .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  button { padding: 9px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.92rem; font-weight: 600; transition: all 0.15s; }
   .btn-primary { background: var(--primary); color: white; }
   .btn-primary:hover { background: var(--primary-dark); }
   .btn-secondary { background: white; color: var(--text); border: 1px solid var(--border); }
@@ -95,217 +45,54 @@
   .btn-info:hover { background: #0d47a1; }
   .btn-danger { background: white; color: var(--danger); border: 1px solid var(--danger); }
   .btn-danger:hover { background: var(--danger); color: white; }
-  .category {
-    background: var(--card);
-    border-radius: 10px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    overflow: hidden;
-  }
-  .category-header {
-    padding: 14px 18px;
-    background: linear-gradient(135deg, #f5f5f5, #eeeeee);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-  }
+  .category { background: var(--card); border-radius: 10px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); overflow: hidden; }
+  .category-header { padding: 14px 18px; background: linear-gradient(135deg, #f5f5f5, #eeeeee); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; }
   .category-header h2 { font-size: 1.1rem; }
   .category-icon { margin-right: 8px; }
-  .category-total {
-    background: var(--primary);
-    color: white;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
+  .category-total { background: var(--primary); color: white; padding: 4px 10px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
   .category-body { padding: 0; }
   .category-body.collapsed { display: none; }
   table { width: 100%; border-collapse: collapse; }
-  thead {
-    background: #fafafa;
-    border-bottom: 2px solid var(--border);
-  }
-  thead th {
-    padding: 10px 8px;
-    text-align: left;
-    font-size: 0.78rem;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
-  }
-  tbody tr {
-    border-bottom: 1px solid var(--border);
-    transition: background 0.1s;
-  }
+  thead { background: #fafafa; border-bottom: 2px solid var(--border); }
+  thead th { padding: 10px 8px; text-align: left; font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
   tbody tr:hover { background: var(--row-hover); }
-  tbody tr.purchased {
-    background: var(--done);
-    opacity: 0.75;
-  }
-  tbody tr.purchased td input[type="text"],
-  tbody tr.purchased td input[type="number"] {
-    text-decoration: line-through;
-    color: var(--muted);
-  }
+  tbody tr.purchased { background: var(--done); opacity: 0.75; }
+  tbody tr.purchased td input[type="text"], tbody tr.purchased td input[type="number"] { text-decoration: line-through; color: var(--muted); }
   td { padding: 8px; vertical-align: middle; }
-  td input {
-    width: 100%;
-    padding: 6px 8px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    font-size: 0.92rem;
-    background: transparent;
-  }
-  td input:focus {
-    outline: none;
-    border-color: var(--primary);
-    background: white;
-  }
+  td input { width: 100%; padding: 6px 8px; border: 1px solid transparent; border-radius: 4px; font-size: 0.92rem; background: transparent; }
+  td input:focus { outline: none; border-color: var(--primary); background: white; }
   td.checkbox-cell { width: 38px; text-align: center; }
-  td.checkbox-cell input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    accent-color: var(--primary);
-  }
+  td.checkbox-cell input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
   td.photo-cell { width: 60px; text-align: center; }
-  .photo-thumb {
-    width: 44px;
-    height: 44px;
-    border-radius: 8px;
-    object-fit: cover;
-    border: 1px solid var(--border);
-    cursor: pointer;
-    display: block;
-    margin: 0 auto;
-    background: #fafafa;
-  }
-  .photo-placeholder {
-    width: 44px;
-    height: 44px;
-    border-radius: 8px;
-    border: 2px dashed var(--border);
-    color: var(--muted);
-    background: #fafafa;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.4rem;
-    margin: 0 auto;
-    transition: all 0.15s;
-  }
-  .photo-placeholder:hover {
-    border-color: var(--primary);
-    color: var(--primary);
-    background: var(--row-hover);
-  }
+  .photo-thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border); cursor: pointer; display: block; margin: 0 auto; background: #fafafa; }
+  .photo-placeholder { width: 44px; height: 44px; border-radius: 8px; border: 2px dashed var(--border); color: var(--muted); background: #fafafa; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin: 0 auto; transition: all 0.15s; }
+  .photo-placeholder:hover { border-color: var(--primary); color: var(--primary); background: var(--row-hover); }
   td.qty-cell { width: 80px; }
   td.unit-cell { width: 70px; }
   td.price-cell { width: 100px; }
   td.subtotal-cell { width: 110px; font-weight: 600; color: var(--primary-dark); text-align: right; padding-right: 12px; }
   td.action-cell { width: 50px; text-align: center; }
-  .remove-btn {
-    background: transparent;
-    color: var(--danger);
-    border: none;
-    padding: 4px 8px;
-    cursor: pointer;
-    font-size: 1.1rem;
-    border-radius: 4px;
-  }
+  .remove-btn { background: transparent; color: var(--danger); border: none; padding: 4px 8px; cursor: pointer; font-size: 1.1rem; border-radius: 4px; }
   .remove-btn:hover { background: #ffebee; }
-  .add-row {
-    padding: 10px 18px;
-    background: #fafafa;
-    text-align: center;
-  }
-  .add-row button {
-    background: transparent;
-    color: var(--primary);
-    border: 1px dashed var(--primary);
-    padding: 6px 14px;
-    font-size: 0.88rem;
-  }
+  .add-row { padding: 10px 18px; background: #fafafa; text-align: center; }
+  .add-row button { background: transparent; color: var(--primary); border: 1px dashed var(--primary); padding: 6px 14px; font-size: 0.88rem; }
   .add-row button:hover { background: var(--row-hover); }
-  .auto-save-indicator {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: var(--primary);
-    color: white;
-    padding: 8px 14px;
-    border-radius: 999px;
-    font-size: 0.85rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none;
-    z-index: 999;
-  }
+  .auto-save-indicator { position: fixed; bottom: 20px; right: 20px; background: var(--primary); color: white; padding: 8px 14px; border-radius: 999px; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
   .auto-save-indicator.show { opacity: 1; }
-  .modal-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.55);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 16px;
-  }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
   .modal-backdrop.show { display: flex; }
-  .modal {
-    background: white;
-    border-radius: 12px;
-    max-width: 420px;
-    width: 100%;
-    padding: 22px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-  }
+  .modal { background: white; border-radius: 12px; max-width: 420px; width: 100%; padding: 22px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
   .modal h3 { font-size: 1.15rem; margin-bottom: 6px; color: var(--primary-dark); }
   .modal p { color: var(--muted); font-size: 0.9rem; margin-bottom: 18px; }
-  .modal-preview {
-    width: 100%;
-    max-height: 260px;
-    object-fit: contain;
-    border-radius: 8px;
-    margin-bottom: 16px;
-    background: #fafafa;
-    border: 1px solid var(--border);
-    display: none;
-  }
+  .modal-preview { width: 100%; max-height: 260px; object-fit: contain; border-radius: 8px; margin-bottom: 16px; background: #fafafa; border: 1px solid var(--border); display: none; }
   .modal-preview.show { display: block; }
   .modal-actions { display: flex; flex-direction: column; gap: 10px; }
-  .modal-actions button {
-    width: 100%;
-    padding: 12px;
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-  }
-  .modal-cancel {
-    text-align: center;
-    margin-top: 10px;
-    color: var(--muted);
-    cursor: pointer;
-    padding: 8px;
-    font-size: 0.9rem;
-  }
+  .modal-actions button { width: 100%; padding: 12px; font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .modal-cancel { text-align: center; margin-top: 10px; color: var(--muted); cursor: pointer; padding: 8px; font-size: 0.9rem; }
   .modal-cancel:hover { color: var(--text); }
-  footer {
-    text-align: center;
-    padding: 20px;
-    color: var(--muted);
-    font-size: 0.85rem;
-  }
+  #installAppBtn { position: fixed; top: 16px; right: 16px; z-index: 998; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+  footer { text-align: center; padding: 20px; color: var(--muted); font-size: 0.85rem; }
   footer strong { color: var(--info); }
   .hidden-input { display: none; }
   @media print {
@@ -328,7 +115,7 @@
 
 <header>
   <h1>🛒 Lista de Feira Mensal</h1>
-  <p>Controle seus gastos com mercado — edite quantidades, preços, adicione fotos e marque o que já comprou.</p>
+  <p>Controle seus gastos com mercado — fotos, quantidades, preços e mais.</p>
   <div class="month-selector">
     <label for="monthInput" style="font-size: 0.9rem;">Mês de referência:</label>
     <input type="month" id="monthInput">
@@ -338,22 +125,10 @@
 </header>
 
 <div class="summary">
-  <div class="stat-card">
-    <div class="label">Itens na lista</div>
-    <div class="value" id="totalItems">0</div>
-  </div>
-  <div class="stat-card">
-    <div class="label">Já comprados</div>
-    <div class="value" id="purchasedItems">0</div>
-  </div>
-  <div class="stat-card total">
-    <div class="label">Total estimado</div>
-    <div class="value" id="totalEstimated">R$ 0,00</div>
-  </div>
-  <div class="stat-card spent">
-    <div class="label">Total gasto (comprados)</div>
-    <div class="value" id="totalSpent">R$ 0,00</div>
-  </div>
+  <div class="stat-card"><div class="label">Itens na lista</div><div class="value" id="totalItems">0</div></div>
+  <div class="stat-card"><div class="label">Já comprados</div><div class="value" id="purchasedItems">0</div></div>
+  <div class="stat-card total"><div class="label">Total estimado</div><div class="value" id="totalEstimated">R$ 0,00</div></div>
+  <div class="stat-card spent"><div class="label">Total gasto</div><div class="value" id="totalSpent">R$ 0,00</div></div>
 </div>
 
 <div class="controls">
@@ -388,7 +163,7 @@
 <div class="auto-save-indicator" id="autoSaveIndicator">✓ Salvo</div>
 
 <footer>
-  💾 Os dados são salvos automaticamente no seu navegador. <strong>Faça backup periódico</strong> clicando em "Salvar Backup" para não perder seus dados se trocar de navegador, dispositivo ou limpar o cache.
+  💾 Os dados são salvos automaticamente no seu dispositivo. <strong>Faça backup periódico</strong> para sincronizar entre celular e PC.
 </footer>
 
 </div>
@@ -501,7 +276,7 @@ function loadData() {
     } else {
       return JSON.parse(saved);
     }
-  } catch (e) { console.warn("Erro ao carregar dados:", e); }
+  } catch (e) { console.warn("Erro ao carregar:", e); }
   return JSON.parse(JSON.stringify(DEFAULT_DATA));
 }
 
@@ -511,9 +286,7 @@ function saveData() {
     showSaveIndicator();
   } catch (e) {
     if (e.name === "QuotaExceededError" || e.code === 22) {
-      alert("⚠️ Espaço de armazenamento do navegador cheio.\n\nIsso geralmente acontece quando há muitas fotos. Sugestões:\n• Remova algumas fotos pesadas\n• Faça um backup (botão 💾) e use ele em outro dispositivo");
-    } else {
-      console.warn("Erro ao salvar:", e);
+      alert("⚠️ Espaço de armazenamento cheio. Remova algumas fotos pesadas ou faça um backup.");
     }
   }
 }
@@ -535,12 +308,8 @@ function render() {
   let totalItems = 0, purchasedItems = 0, totalEstimated = 0, totalSpent = 0;
 
   Object.entries(data).forEach(([catName, cat]) => {
-    const catTotal = cat.items.reduce((s, it) => {
-      const sub = (Number(it.qty) || 0) * (Number(it.price) || 0);
-      return s + sub;
-    }, 0);
+    const catTotal = cat.items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0);
     totalEstimated += catTotal;
-
     cat.items.forEach(it => {
       if (it.name && it.name.trim()) {
         totalItems++;
@@ -560,25 +329,11 @@ function render() {
       </div>
       <div class="category-body">
         <table>
-          <thead>
-            <tr>
-              <th></th>
-              <th>Foto</th>
-              <th>Item</th>
-              <th>Qtd</th>
-              <th class="unit-th">Un</th>
-              <th>Preço (R$)</th>
-              <th style="text-align:right;padding-right:12px;">Subtotal</th>
-              <th></th>
-            </tr>
-          </thead>
+          <thead><tr><th></th><th>Foto</th><th>Item</th><th>Qtd</th><th class="unit-th">Un</th><th>Preço (R$)</th><th style="text-align:right;padding-right:12px;">Subtotal</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
-        <div class="add-row">
-          <button onclick="addItem('${catName.replace(/'/g, "\\'")}')">+ Adicionar item</button>
-        </div>
-      </div>
-    `;
+        <div class="add-row"><button onclick="addItem('${catName.replace(/'/g, "\\'")}')">+ Adicionar item</button></div>
+      </div>`;
     const tbody = section.querySelector("tbody");
     cat.items.forEach((it, idx) => {
       const tr = document.createElement("tr");
@@ -595,8 +350,7 @@ function render() {
         <td class="unit-cell"><input type="text" value="${escapeAttr(it.unit || "")}" placeholder="un" data-cat="${catName}" data-idx="${idx}" data-field="unit"></td>
         <td class="price-cell"><input type="number" min="0" step="0.01" value="${it.price || ""}" placeholder="0,00" data-cat="${catName}" data-idx="${idx}" data-field="price"></td>
         <td class="subtotal-cell">${fmtBRL(subtotal)}</td>
-        <td class="action-cell"><button class="remove-btn" onclick="removeItem('${catName.replace(/'/g, "\\'")}', ${idx})" title="Remover">×</button></td>
-      `;
+        <td class="action-cell"><button class="remove-btn" onclick="removeItem('${catName.replace(/'/g, "\\'")}', ${idx})" title="Remover">×</button></td>`;
       tbody.appendChild(tr);
     });
     container.appendChild(section);
@@ -619,9 +373,7 @@ function escapeAttr(s) {
 
 function onFieldChange(e) {
   const inp = e.target;
-  const cat = inp.dataset.cat;
-  const idx = Number(inp.dataset.idx);
-  const field = inp.dataset.field;
+  const cat = inp.dataset.cat, idx = Number(inp.dataset.idx), field = inp.dataset.field;
   if (!cat || isNaN(idx) || !field) return;
   let val;
   if (field === "purchased") val = inp.checked;
@@ -632,42 +384,35 @@ function onFieldChange(e) {
   render();
 }
 
-function toggleCategory(headerEl) {
-  const body = headerEl.nextElementSibling;
-  body.classList.toggle("collapsed");
-}
+function toggleCategory(h) { h.nextElementSibling.classList.toggle("collapsed"); }
 
 function addItem(catName) {
   data[catName].items.push({ name: "", qty: 1, unit: "un", price: 0, image: "" });
-  saveData();
-  render();
+  saveData(); render();
 }
 
 function removeItem(catName, idx) {
   if (!confirm("Remover este item?")) return;
   data[catName].items.splice(idx, 1);
-  saveData();
-  render();
+  saveData(); render();
 }
 
 function resetCheckboxes() {
   if (!confirm("Desmarcar todos os itens comprados?")) return;
   Object.values(data).forEach(cat => cat.items.forEach(it => it.purchased = false));
-  saveData();
-  render();
+  saveData(); render();
 }
 
 function resetAll() {
-  if (!confirm("Apagar tudo e voltar à lista padrão? Esta ação não pode ser desfeita.\n\nDica: clique em 'Salvar Backup' antes para não perder seus dados.")) return;
+  if (!confirm("Apagar tudo e voltar à lista padrão?\n\nDica: salve um backup antes.")) return;
   data = JSON.parse(JSON.stringify(DEFAULT_DATA));
   localStorage.removeItem(BUDGET_KEY);
   document.getElementById("budgetInput").value = "";
-  saveData();
-  render();
+  saveData(); render();
 }
 
 function openPhotoModal(catName, idx) {
-  activePhotoTarget = { cat: catName, idx: idx };
+  activePhotoTarget = { cat: catName, idx };
   const item = data[catName].items[idx];
   document.getElementById("photoModalTitle").textContent = "Foto: " + (item.name || "(item sem nome)");
   document.getElementById("photoModalSubtitle").textContent = item.image
@@ -690,13 +435,8 @@ function closePhotoModal() {
   activePhotoTarget = null;
 }
 
-function triggerCamera() {
-  document.getElementById("cameraInput").click();
-}
-
-function triggerGallery() {
-  document.getElementById("galleryInput").click();
-}
+function triggerCamera() { document.getElementById("cameraInput").click(); }
+function triggerGallery() { document.getElementById("galleryInput").click(); }
 
 async function handlePhotoUpload(event) {
   const file = event.target.files[0];
@@ -717,18 +457,16 @@ function removePhoto() {
   if (!activePhotoTarget) return;
   if (!confirm("Remover esta foto?")) return;
   data[activePhotoTarget.cat].items[activePhotoTarget.idx].image = "";
-  saveData();
-  closePhotoModal();
-  render();
+  saveData(); closePhotoModal(); render();
 }
 
 function compressImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Falha ao ler o arquivo"));
+    reader.onerror = () => reject(new Error("Falha ao ler"));
     reader.onload = (e) => {
       const img = new Image();
-      img.onerror = () => reject(new Error("Falha ao carregar imagem"));
+      img.onerror = () => reject(new Error("Falha ao carregar"));
       img.onload = () => {
         const maxSize = 240;
         let w = img.width, h = img.height;
@@ -769,7 +507,7 @@ function exportBackup() {
   a.download = `backup_feira_${month}_${ts}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  alert("✓ Backup salvo! Guarde esse arquivo em local seguro.\n\nPara restaurar depois, clique em 'Restaurar Backup' e selecione esse arquivo.");
+  alert("✓ Backup salvo!");
 }
 
 function importBackup(event) {
@@ -780,31 +518,20 @@ function importBackup(event) {
     try {
       const backup = JSON.parse(e.target.result);
       if (!backup.data || typeof backup.data !== "object") {
-        alert("❌ Arquivo de backup inválido. Verifique se é um arquivo JSON exportado por este app.");
-        return;
+        alert("❌ Backup inválido."); return;
       }
-      const ok = confirm(
-        "Restaurar este backup vai SUBSTITUIR sua lista atual.\n\n" +
-        "Backup do dia: " + (backup.exportedAt ? new Date(backup.exportedAt).toLocaleString("pt-BR") : "desconhecido") + "\n" +
-        "Mês: " + (backup.month || "—") + "\n\n" +
-        "Deseja continuar?"
-      );
-      if (!ok) { event.target.value = ""; return; }
+      if (!confirm("Restaurar este backup vai SUBSTITUIR sua lista atual.\n\nBackup do dia: " + (backup.exportedAt ? new Date(backup.exportedAt).toLocaleString("pt-BR") : "?") + "\n\nContinuar?")) {
+        event.target.value = ""; return;
+      }
       data = backup.data;
       Object.values(data).forEach(c => c.items.forEach(it => { if (!("image" in it)) it.image = ""; }));
       saveData();
-      if (backup.month) {
-        document.getElementById("monthInput").value = backup.month;
-        localStorage.setItem(MONTH_KEY, backup.month);
-      }
-      if (backup.budget) {
-        document.getElementById("budgetInput").value = backup.budget;
-        localStorage.setItem(BUDGET_KEY, backup.budget);
-      }
+      if (backup.month) { document.getElementById("monthInput").value = backup.month; localStorage.setItem(MONTH_KEY, backup.month); }
+      if (backup.budget) { document.getElementById("budgetInput").value = backup.budget; localStorage.setItem(BUDGET_KEY, backup.budget); }
       render();
-      alert("✓ Backup restaurado com sucesso!");
+      alert("✓ Backup restaurado!");
     } catch (err) {
-      alert("❌ Erro ao ler o backup: " + err.message);
+      alert("❌ Erro: " + err.message);
     }
     event.target.value = "";
   };
@@ -825,8 +552,7 @@ function exportCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  const month = document.getElementById("monthInput").value || "lista";
-  a.download = `feira_${month}.csv`;
+  a.download = `feira_${document.getElementById("monthInput").value || "lista"}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -836,15 +562,51 @@ const budgetInput = document.getElementById("budgetInput");
 const savedMonth = localStorage.getItem(MONTH_KEY);
 const savedBudget = localStorage.getItem(BUDGET_KEY);
 if (savedMonth) monthInput.value = savedMonth;
-else {
-  const d = new Date();
-  monthInput.value = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
-}
+else { const d = new Date(); monthInput.value = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); }
 if (savedBudget) budgetInput.value = savedBudget;
 monthInput.addEventListener("change", () => localStorage.setItem(MONTH_KEY, monthInput.value));
 budgetInput.addEventListener("change", () => localStorage.setItem(BUDGET_KEY, budgetInput.value));
 
 render();
+
+// ============ PWA ============
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(err => console.warn("SW falhou:", err));
+  });
+}
+
+let deferredInstallPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  showInstallButton();
+});
+
+function showInstallButton() {
+  if (document.getElementById("installAppBtn")) return;
+  const btn = document.createElement("button");
+  btn.id = "installAppBtn";
+  btn.className = "btn-primary";
+  btn.textContent = "📱 Instalar app";
+  btn.onclick = async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    btn.remove();
+    if (outcome === "accepted") {
+      setTimeout(() => alert("✓ App instalado! Procure o ícone na tela inicial."), 500);
+    }
+  };
+  document.body.appendChild(btn);
+}
+
+window.addEventListener("appinstalled", () => {
+  const b = document.getElementById("installAppBtn");
+  if (b) b.remove();
+});
 </script>
 </body>
 </html>
+                                                                                                                                                                                     
