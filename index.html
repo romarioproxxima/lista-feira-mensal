@@ -22,7 +22,7 @@
   }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); padding: 16px; min-height: 100vh; }
   .container { max-width: 1100px; margin: 0 auto; }
-  header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  header { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); position: relative; }
   header h1 { font-size: 1.8rem; margin-bottom: 6px; }
   header p { opacity: 0.9; font-size: 0.95rem; }
   .month-selector { margin-top: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -80,6 +80,14 @@
   .add-row button:hover { background: var(--row-hover); }
   .auto-save-indicator { position: fixed; bottom: 20px; right: 20px; background: var(--primary); color: white; padding: 8px 14px; border-radius: 999px; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
   .auto-save-indicator.show { opacity: 1; }
+  .sync-pill { position: fixed; top: 16px; left: 16px; background: white; color: var(--text); padding: 6px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 6px; cursor: pointer; z-index: 998; transition: all 0.2s; }
+  .sync-pill:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+  .sync-pill.synced { color: var(--primary); }
+  .sync-pill.syncing { color: var(--info); }
+  .sync-pill.offline { color: var(--danger); }
+  .sync-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .sync-pill.syncing .dot { animation: pulse 1s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
   .modal-backdrop.show { display: flex; }
   .modal { background: white; border-radius: 12px; max-width: 420px; width: 100%; padding: 22px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
@@ -96,13 +104,14 @@
   footer strong { color: var(--info); }
   .hidden-input { display: none; }
   @media print {
-    .controls, .add-row, .remove-btn, button, .auto-save-indicator { display: none !important; }
+    .controls, .add-row, .remove-btn, button, .auto-save-indicator, .sync-pill { display: none !important; }
     body { background: white; }
     .category { box-shadow: none; border: 1px solid #ccc; }
     header { background: white !important; color: black !important; border: 2px solid #2e7d32; }
   }
   @media (max-width: 640px) {
-    body { padding: 8px; }
+    body { padding: 8px; padding-top: 50px; }
+    .sync-pill { top: 8px; left: 8px; font-size: 0.72rem; padding: 5px 10px; }
     header { padding: 18px; }
     header h1 { font-size: 1.35rem; }
     header p { font-size: 0.85rem; }
@@ -155,6 +164,12 @@
 </style>
 </head>
 <body>
+
+<div class="sync-pill" id="syncPill" onclick="syncNow()" title="Clique para sincronizar agora">
+  <span class="dot"></span>
+  <span id="syncLabel">Iniciando...</span>
+</div>
+
 <div class="container">
 
 <header>
@@ -207,12 +222,17 @@
 <div class="auto-save-indicator" id="autoSaveIndicator">✓ Salvo</div>
 
 <footer>
-  💾 Os dados são salvos automaticamente no seu dispositivo. <strong>Faça backup periódico</strong> para sincronizar entre celular e PC.
+  ☁️ Sincroniza automaticamente entre seus dispositivos via Google Sheets. <strong>Funciona offline</strong> — sincroniza quando voltar a internet.
 </footer>
 
 </div>
 
 <script>
+const SYNC_URL = "https://script.google.com/macros/s/AKfycbzSgiAGOCQa3BWvn-hMaOb7uFBTFMRaM6wgclCzA78Sb_svyVbXpM3nMpz5vEdDtHa2Gg/exec";
+const SYNC_TOKEN = "feira-romario-2026";
+const SYNC_DEBOUNCE_MS = 2000;
+const SYNC_PULL_INTERVAL_MS = 30000;
+
 const DEFAULT_DATA = {
   "Alimentos básicos (mercearia)": {
     icon: "🍚",
@@ -302,9 +322,12 @@ const STORAGE_KEY = "feira_mensal_v2";
 const LEGACY_STORAGE_KEY = "feira_mensal_v1";
 const BUDGET_KEY = "feira_mensal_budget";
 const MONTH_KEY = "feira_mensal_month";
+const LAST_SYNC_KEY = "feira_last_sync_ts";
 
 let data = loadData();
 let activePhotoTarget = null;
+let lastSyncedTs = localStorage.getItem(LAST_SYNC_KEY) || null;
+let pushTimer = null;
 
 function loadData() {
   try {
@@ -321,13 +344,14 @@ function loadData() {
   return JSON.parse(JSON.stringify(DEFAULT_DATA));
 }
 
-function saveData() {
+function saveData(triggerSync) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     showSaveIndicator();
+    if (triggerSync !== false) scheduleSyncPush();
   } catch (e) {
     if (e.name === "QuotaExceededError" || e.code === 22) {
-      alert("Espaco de armazenamento cheio. Remova fotos pesadas ou faca backup.");
+      alert("Espaço de armazenamento cheio. Remova fotos pesadas ou faça backup.");
     }
   }
 }
@@ -370,7 +394,7 @@ function render() {
       </div>
       <div class="category-body">
         <table>
-          <thead><tr><th></th><th>Foto</th><th>Item</th><th>Qtd</th><th class="unit-th">Un</th><th>Preco (R$)</th><th style="text-align:right;padding-right:12px;">Subtotal</th><th></th></tr></thead>
+          <thead><tr><th></th><th>Foto</th><th>Item</th><th>Qtd</th><th class="unit-th">Un</th><th>Preço (R$)</th><th style="text-align:right;padding-right:12px;">Subtotal</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
         <div class="add-row"><button onclick="addItem('${catName.replace(/'/g, "\\'")}')">+ Adicionar item</button></div>
@@ -445,7 +469,7 @@ function resetCheckboxes() {
 }
 
 function resetAll() {
-  if (!confirm("Apagar tudo e voltar a lista padrao?\n\nDica: salve um backup antes.")) return;
+  if (!confirm("Apagar tudo e voltar à lista padrão?\n\nDica: salve um backup antes.")) return;
   data = JSON.parse(JSON.stringify(DEFAULT_DATA));
   localStorage.removeItem(BUDGET_KEY);
   document.getElementById("budgetInput").value = "";
@@ -457,7 +481,7 @@ function openPhotoModal(catName, idx) {
   const item = data[catName].items[idx];
   document.getElementById("photoModalTitle").textContent = "Foto: " + (item.name || "(item sem nome)");
   document.getElementById("photoModalSubtitle").textContent = item.image
-    ? "Esta e a foto atual. Substitua ou remova abaixo."
+    ? "Esta é a foto atual. Substitua ou remova abaixo."
     : "Tire uma foto ou escolha da galeria.";
   const preview = document.getElementById("photoModalPreview");
   if (item.image) {
@@ -559,7 +583,7 @@ function importBackup(event) {
     try {
       const backup = JSON.parse(e.target.result);
       if (!backup.data || typeof backup.data !== "object") {
-        alert("Backup invalido."); return;
+        alert("Backup inválido."); return;
       }
       if (!confirm("Restaurar este backup vai SUBSTITUIR sua lista atual.\n\nBackup: " + (backup.exportedAt ? new Date(backup.exportedAt).toLocaleString("pt-BR") : "?") + "\n\nContinuar?")) {
         event.target.value = ""; return;
@@ -580,12 +604,12 @@ function importBackup(event) {
 }
 
 function exportCSV() {
-  const rows = [["Categoria", "Item", "Qtd", "Unidade", "Preco (R$)", "Subtotal (R$)", "Comprado"]];
+  const rows = [["Categoria", "Item", "Qtd", "Unidade", "Preço (R$)", "Subtotal (R$)", "Comprado"]];
   Object.entries(data).forEach(([cat, c]) => {
     c.items.forEach(it => {
       if (!it.name) return;
       const sub = (Number(it.qty) || 0) * (Number(it.price) || 0);
-      rows.push([cat, it.name, it.qty, it.unit, (Number(it.price)||0).toFixed(2), sub.toFixed(2), it.purchased ? "Sim" : "Nao"]);
+      rows.push([cat, it.name, it.qty, it.unit, (Number(it.price)||0).toFixed(2), sub.toFixed(2), it.purchased ? "Sim" : "Não"]);
     });
   });
   const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
@@ -598,6 +622,108 @@ function exportCSV() {
   URL.revokeObjectURL(url);
 }
 
+// ============ SYNC com Google Sheets ============
+function setSyncStatus(state, label) {
+  const pill = document.getElementById("syncPill");
+  const lbl = document.getElementById("syncLabel");
+  pill.classList.remove("synced", "syncing", "offline");
+  if (state) pill.classList.add(state);
+  lbl.textContent = label;
+}
+
+async function syncPull() {
+  if (!navigator.onLine) {
+    setSyncStatus("offline", "Offline");
+    return false;
+  }
+  setSyncStatus("syncing", "Sincronizando...");
+  try {
+    const resp = await fetch(SYNC_URL + "?token=" + encodeURIComponent(SYNC_TOKEN), {
+      method: "GET",
+      redirect: "follow"
+    });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const result = await resp.json();
+    if (result.error) throw new Error(result.error);
+    if (!result.data) {
+      setSyncStatus("synced", "Pronto (vazio)");
+      return true;
+    }
+    const remoteTs = result.ts;
+    if (remoteTs && lastSyncedTs && remoteTs <= lastSyncedTs) {
+      setSyncStatus("synced", "Atualizado");
+      return true;
+    }
+    const remoteData = JSON.parse(result.data);
+    if (remoteData && typeof remoteData === "object") {
+      data = remoteData;
+      Object.values(data).forEach(c => {
+        if (c && c.items) c.items.forEach(it => { if (!("image" in it)) it.image = ""; });
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      if (remoteTs) {
+        lastSyncedTs = remoteTs;
+        localStorage.setItem(LAST_SYNC_KEY, remoteTs);
+      }
+      render();
+      setSyncStatus("synced", "Atualizado");
+    }
+    return true;
+  } catch (err) {
+    console.warn("syncPull falhou:", err);
+    setSyncStatus("offline", "Sem sync");
+    return false;
+  }
+}
+
+function scheduleSyncPush() {
+  clearTimeout(pushTimer);
+  setSyncStatus("syncing", "Salvando...");
+  pushTimer = setTimeout(syncPush, SYNC_DEBOUNCE_MS);
+}
+
+async function syncPush() {
+  if (!navigator.onLine) {
+    setSyncStatus("offline", "Offline");
+    return false;
+  }
+  setSyncStatus("syncing", "Enviando...");
+  try {
+    const payload = JSON.stringify({
+      token: SYNC_TOKEN,
+      data: JSON.stringify(data)
+    });
+    const resp = await fetch(SYNC_URL, {
+      method: "POST",
+      mode: "cors",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: payload
+    });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const result = await resp.json();
+    if (result.error) throw new Error(result.error);
+    if (result.ts) {
+      lastSyncedTs = result.ts;
+      localStorage.setItem(LAST_SYNC_KEY, result.ts);
+    }
+    setSyncStatus("synced", "Salvo na nuvem");
+    return true;
+  } catch (err) {
+    console.warn("syncPush falhou:", err);
+    setSyncStatus("offline", "Erro - tentando depois");
+    setTimeout(() => { if (navigator.onLine) syncPush(); }, 10000);
+    return false;
+  }
+}
+
+async function syncNow() {
+  await syncPull();
+}
+
+window.addEventListener("online", () => { syncPull(); });
+window.addEventListener("offline", () => setSyncStatus("offline", "Offline"));
+
 const monthInput = document.getElementById("monthInput");
 const budgetInput = document.getElementById("budgetInput");
 const savedMonth = localStorage.getItem(MONTH_KEY);
@@ -609,6 +735,8 @@ monthInput.addEventListener("change", () => localStorage.setItem(MONTH_KEY, mont
 budgetInput.addEventListener("change", () => localStorage.setItem(BUDGET_KEY, budgetInput.value));
 
 render();
+syncPull();
+setInterval(() => { if (navigator.onLine) syncPull(); }, SYNC_PULL_INTERVAL_MS);
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
@@ -628,7 +756,7 @@ function showInstallButton() {
   const btn = document.createElement("button");
   btn.id = "installAppBtn";
   btn.className = "btn-primary";
-  btn.textContent = "Instalar app";
+  btn.textContent = "📱 Instalar app";
   btn.onclick = async () => {
     if (!deferredInstallPrompt) return;
     deferredInstallPrompt.prompt();
@@ -636,7 +764,7 @@ function showInstallButton() {
     deferredInstallPrompt = null;
     btn.remove();
     if (outcome === "accepted") {
-      setTimeout(() => alert("App instalado! Procure o icone na tela inicial."), 500);
+      setTimeout(() => alert("App instalado! Procure o ícone na tela inicial."), 500);
     }
   };
   document.body.appendChild(btn);
