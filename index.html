@@ -195,6 +195,7 @@
   <button class="btn-info" onclick="document.getElementById('fileInput').click()">📂 Restaurar Backup</button>
   <input type="file" id="fileInput" accept=".json" class="hidden-input" onchange="importBackup(event)">
   <button class="btn-primary" onclick="exportCSV()">📥 Exportar CSV</button>
+  <button class="btn-primary" onclick="autoFillImages(true)">🎨 Gerar fotos auto</button>
   <button class="btn-secondary" onclick="window.print()">🖨️ Imprimir</button>
   <button class="btn-secondary" onclick="resetCheckboxes()">🔄 Desmarcar comprados</button>
   <button class="btn-danger" onclick="resetAll()">🗑️ Limpar tudo</button>
@@ -373,6 +374,7 @@ function render() {
   let totalItems = 0, purchasedItems = 0, totalEstimated = 0, totalSpent = 0;
 
   Object.entries(data).forEach(([catName, cat]) => {
+    if (!cat || !cat.items) return;
     const catTotal = cat.items.reduce((s, it) => s + (Number(it.qty) || 0) * (Number(it.price) || 0), 0);
     totalEstimated += catTotal;
     cat.items.forEach(it => {
@@ -389,7 +391,7 @@ function render() {
     section.className = "category";
     section.innerHTML = `
       <div class="category-header" onclick="toggleCategory(this)">
-        <h2><span class="category-icon">${cat.icon}</span>${catName}</h2>
+        <h2><span class="category-icon">${cat.icon || "📦"}</span>${catName}</h2>
         <span class="category-total">${fmtBRL(catTotal)}</span>
       </div>
       <div class="category-body">
@@ -555,6 +557,110 @@ document.getElementById("photoModal").addEventListener("click", (e) => {
   if (e.target.id === "photoModal") closePhotoModal();
 });
 
+// ============ AUTO-GERAR FOTOS (emoji em canvas) ============
+const PRODUCT_EMOJI = [
+  { keys: ["arroz"], emoji: "🍚", bg: "#fff8e1" },
+  { keys: ["feijão", "feijao"], emoji: "🫘", bg: "#efebe9" },
+  { keys: ["óleo", "oleo"], emoji: "🫒", bg: "#fff9c4" },
+  { keys: ["açúcar", "acucar"], emoji: "🍬", bg: "#fce4ec" },
+  { keys: ["café", "cafe"], emoji: "☕", bg: "#d7ccc8" },
+  { keys: ["macarrão", "macarrao", "espaguete"], emoji: "🍝", bg: "#fff3e0" },
+  { keys: ["farinha de trigo"], emoji: "🌾", bg: "#fff8e1" },
+  { keys: ["farinha de mandioca", "farofa"], emoji: "🌽", bg: "#fff8e1" },
+  { keys: ["sal refinado", "sal "], emoji: "🧂", bg: "#fafafa" },
+  { keys: ["molho de tomate"], emoji: "🍅", bg: "#ffebee" },
+  { keys: ["bolacha", "biscoito"], emoji: "🍪", bg: "#fff3e0" },
+  { keys: ["salgadinho"], emoji: "🍿", bg: "#fff9c4" },
+  { keys: ["milho", "pipoca"], emoji: "🌽", bg: "#fff9c4" },
+  { keys: ["chá", "cha "], emoji: "🍵", bg: "#e8f5e9" },
+  { keys: ["leite condensado"], emoji: "🍮", bg: "#fff8e1" },
+  { keys: ["creme de leite"], emoji: "🥛", bg: "#f5f5f5" },
+  { keys: ["banana"], emoji: "🍌", bg: "#fff9c4" },
+  { keys: ["maçã", "maca"], emoji: "🍎", bg: "#ffebee" },
+  { keys: ["tomate"], emoji: "🍅", bg: "#ffebee" },
+  { keys: ["cebola"], emoji: "🧅", bg: "#fff3e0" },
+  { keys: ["batata"], emoji: "🥔", bg: "#efebe9" },
+  { keys: ["alho"], emoji: "🧄", bg: "#fafafa" },
+  { keys: ["alface"], emoji: "🥬", bg: "#e8f5e9" },
+  { keys: ["cenoura"], emoji: "🥕", bg: "#fff3e0" },
+  { keys: ["limão", "limao"], emoji: "🍋", bg: "#fff9c4" },
+  { keys: ["carne de sol", "patinho", "acém", "acem", "carne bovina"], emoji: "🥩", bg: "#ffebee" },
+  { keys: ["frango", "peito"], emoji: "🍗", bg: "#fff3e0" },
+  { keys: ["linguiça", "linguica", "calabresa"], emoji: "🌭", bg: "#fff3e0" },
+  { keys: ["ovo"], emoji: "🥚", bg: "#fff8e1" },
+  { keys: ["leite integral", "leite "], emoji: "🥛", bg: "#f5f5f5" },
+  { keys: ["queijo", "mussarela"], emoji: "🧀", bg: "#fff8e1" },
+  { keys: ["presunto"], emoji: "🥓", bg: "#ffebee" },
+  { keys: ["iogurte"], emoji: "🥛", bg: "#fce4ec" },
+  { keys: ["manteiga"], emoji: "🧈", bg: "#fff8e1" },
+  { keys: ["detergente"], emoji: "🧴", bg: "#e3f2fd" },
+  { keys: ["sabão em pó", "sabao em po"], emoji: "🧺", bg: "#e3f2fd" },
+  { keys: ["sabão líquido", "sabao liquido", "sabão liquido"], emoji: "🧴", bg: "#e3f2fd" },
+  { keys: ["sabão", "sabao"], emoji: "🧼", bg: "#e3f2fd" },
+  { keys: ["amaciante"], emoji: "🧴", bg: "#f3e5f5" },
+  { keys: ["água sanitária", "agua sanitaria"], emoji: "🧴", bg: "#fafafa" },
+  { keys: ["papel higiênico", "papel higienico"], emoji: "🧻", bg: "#f5f5f5" },
+  { keys: ["pasta de dente"], emoji: "🪥", bg: "#e3f2fd" },
+  { keys: ["sabonete"], emoji: "🧼", bg: "#fce4ec" },
+  { keys: ["shampoo", "xampu"], emoji: "🧴", bg: "#fce4ec" },
+  { keys: ["desodorante"], emoji: "🧴", bg: "#e8f5e9" },
+  { keys: ["esponja"], emoji: "🧽", bg: "#fff9c4" },
+  { keys: ["lava roupas", "lava-roupas"], emoji: "🧺", bg: "#e3f2fd" },
+  { keys: ["desinfetante"], emoji: "🧴", bg: "#e8f5e9" }
+];
+
+function pickEmojiFor(name) {
+  if (!name) return { emoji: "🛒", bg: "#f5f5f5" };
+  const lower = name.toLowerCase();
+  for (const p of PRODUCT_EMOJI) {
+    for (const k of p.keys) {
+      if (lower.includes(k)) return p;
+    }
+  }
+  return { emoji: "🛒", bg: "#f5f5f5" };
+}
+
+function generateProductImage(name) {
+  const info = pickEmojiFor(name);
+  const size = 240;
+  const canvas = document.createElement("canvas");
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  const grd = ctx.createLinearGradient(0, 0, size, size);
+  grd.addColorStop(0, info.bg);
+  grd.addColorStop(1, "#ffffff");
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, size, size);
+  ctx.strokeStyle = "rgba(0,0,0,0.06)";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(2, 2, size - 4, size - 4);
+  ctx.font = "150px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(info.emoji, size / 2, size / 2 + 6);
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
+
+function autoFillImages(force) {
+  let changed = 0;
+  Object.values(data).forEach(cat => {
+    if (!cat || !cat.items) return;
+    cat.items.forEach(it => {
+      if (!it.name || !it.name.trim()) return;
+      if (force || !it.image) {
+        it.image = generateProductImage(it.name);
+        changed++;
+      }
+    });
+  });
+  if (changed > 0) {
+    saveData();
+    render();
+    if (force) alert("🎨 " + changed + " foto(s) gerada(s) automaticamente!");
+  }
+  return changed;
+}
+
 function exportBackup() {
   const backup = {
     version: 2,
@@ -654,20 +760,29 @@ async function syncPull() {
       setSyncStatus("synced", "Atualizado");
       return true;
     }
-    const remoteData = JSON.parse(result.data);
-    if (remoteData && typeof remoteData === "object") {
-      data = remoteData;
-      Object.values(data).forEach(c => {
-        if (c && c.items) c.items.forEach(it => { if (!("image" in it)) it.image = ""; });
-      });
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      if (remoteTs) {
-        lastSyncedTs = remoteTs;
-        localStorage.setItem(LAST_SYNC_KEY, remoteTs);
-      }
-      render();
-      setSyncStatus("synced", "Atualizado");
+    let remoteData;
+    try { remoteData = JSON.parse(result.data); }
+    catch (e) {
+      console.warn("Dados remotos inválidos:", e);
+      setSyncStatus("offline", "Dados inválidos");
+      return false;
     }
+    const isValidShape = remoteData && typeof remoteData === "object" &&
+      Object.values(remoteData).every(c => c && Array.isArray(c.items));
+    if (!isValidShape) {
+      console.warn("Estrutura remota inválida, ignorando.");
+      setSyncStatus("synced", "Atualizado");
+      return false;
+    }
+    data = remoteData;
+    Object.values(data).forEach(c => c.items.forEach(it => { if (!("image" in it)) it.image = ""; }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if (remoteTs) {
+      lastSyncedTs = remoteTs;
+      localStorage.setItem(LAST_SYNC_KEY, remoteTs);
+    }
+    render();
+    setSyncStatus("synced", "Atualizado");
     return true;
   } catch (err) {
     console.warn("syncPull falhou:", err);
@@ -689,10 +804,7 @@ async function syncPush() {
   }
   setSyncStatus("syncing", "Enviando...");
   try {
-    const payload = JSON.stringify({
-      token: SYNC_TOKEN,
-      data: JSON.stringify(data)
-    });
+    const payload = JSON.stringify({ token: SYNC_TOKEN, data: JSON.stringify(data) });
     const resp = await fetch(SYNC_URL, {
       method: "POST",
       mode: "cors",
@@ -717,9 +829,7 @@ async function syncPush() {
   }
 }
 
-async function syncNow() {
-  await syncPull();
-}
+async function syncNow() { await syncPull(); }
 
 window.addEventListener("online", () => { syncPull(); });
 window.addEventListener("offline", () => setSyncStatus("offline", "Offline"));
@@ -735,6 +845,8 @@ monthInput.addEventListener("change", () => localStorage.setItem(MONTH_KEY, mont
 budgetInput.addEventListener("change", () => localStorage.setItem(BUDGET_KEY, budgetInput.value));
 
 render();
+// Auto-gera fotos pra itens sem imagem
+setTimeout(() => { autoFillImages(false); }, 600);
 syncPull();
 setInterval(() => { if (navigator.onLine) syncPull(); }, SYNC_PULL_INTERVAL_MS);
 
