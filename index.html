@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lista de Feira Mensal</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f8fa;
+    --card: #ffffff;
+    --primary: #2e7d32;
+    --primary-dark: #1b5e20;
+    --accent: #ff9800;
+    --danger: #d32f2f;
+    --info: #1976d2;
+    --text: #212121;
+    --muted: #757575;
+    --border: #e0e0e0;
+    --row-hover: #f1f8e9;
+    --done: #c8e6c9;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px;
+    min-height: 100vh;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  header {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  header h1 { font-size: 1.8rem; margin-bottom: 6px; }
+  header p { opacity: 0.9; font-size: 0.95rem; }
+  .month-selector {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .month-selector input, .month-selector select {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: none;
+    font-size: 1rem;
+    background: rgba(255,255,255,0.95);
+    color: var(--text);
+  }
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--card);
+    padding: 16px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    border-left: 4px solid var(--primary);
+  }
+  .stat-card .label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card .value { font-size: 1.5rem; font-weight: 700; color: var(--primary-dark); margin-top: 4px; }
+  .stat-card.total { border-left-color: var(--accent); }
+  .stat-card.total .value { color: var(--accent); }
+  .stat-card.spent { border-left-color: var(--danger); }
+  .stat-card.spent .value { color: var(--danger); }
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  button {
+    padding: 9px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.92rem;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-secondary { background: white; color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: #f5f5f5; }
+  .btn-info { background: var(--info); color: white; }
+  .btn-info:hover { background: #0d47a1; }
+  .btn-danger { background: white; color: var(--danger); border: 1px solid var(--danger); }
+  .btn-danger:hover { background: var(--danger); color: white; }
+  .category {
+    background: var(--card);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    overflow: hidden;
+  }
+  .category-header {
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #f5f5f5, #eeeeee);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .category-header h2 { font-size: 1.1rem; }
+  .category-icon { margin-right: 8px; }
+  .category-total {
+    background: var(--primary);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .category-body { padding: 0; }
+  .category-body.collapsed { display: none; }
+  table { width: 100%; border-collapse: collapse; }
+  thead {
+    background: #fafafa;
+    border-bottom: 2px solid var(--border);
+  }
+  thead th {
+    padding: 10px 8px;
+    text-align: left;
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  tbody tr:hover { background: var(--row-hover); }
+  tbody tr.purchased {
+    background: var(--done);
+    opacity: 0.75;
+  }
+  tbody tr.purchased td input[type="text"],
+  tbody tr.purchased td input[type="number"] {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+  td { padding: 8px; vertical-align: middle; }
+  td input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 0.92rem;
+    background: transparent;
+  }
+  td input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: white;
+  }
+  td.checkbox-cell { width: 38px; text-align: center; }
+  td.checkbox-cell input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary);
+  }
+  td.photo-cell { width: 60px; text-align: center; }
+  .photo-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    display: block;
+    margin: 0 auto;
+    background: #fafafa;
+  }
+  .photo-placeholder {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    border: 2px dashed var(--border);
+    color: var(--muted);
+    background: #fafafa;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin: 0 auto;
+    transition: all 0.15s;
+  }
+  .photo-placeholder:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--row-hover);
+  }
+  td.qty-cell { width: 80px; }
+  td.unit-cell { width: 70px; }
+  td.price-cell { width: 100px; }
+  td.subtotal-cell { width: 110px; font-weight: 600; color: var(--primary-dark); text-align: right; padding-right: 12px; }
+  td.action-cell { width: 50px; text-align: center; }
+  .remove-btn {
+    background: transparent;
+    color: var(--danger);
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    border-radius: 4px;
+  }
+  .remove-btn:hover { background: #ffebee; }
+  .add-row {
+    padding: 10px 18px;
+    background: #fafafa;
+    text-align: center;
+  }
+  .add-row button {
+    background: transparent;
+    color: var(--primary);
+    border: 1px dashed var(--primary);
+    padding: 6px 14px;
+    font-size: 0.88rem;
+  }
+  .add-row button:hover { background: var(--row-hover); }
+  .auto-save-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--primary);
+    color: white;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 999;
+  }
+  .auto-save-indicator.show { opacity: 1; }
+  /* Modal */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 12px;
+    max-width: 420px;
+    width: 100%;
+    padding: 22px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  }
+  .modal h3 { font-size: 1.15rem; margin-bottom: 6px; color: var(--primary-dark); }
+  .modal p { color: var(--muted); font-size: 0.9rem; margin-bottom: 18px; }
+  .modal-preview {
+    width: 100%;
+    max-height: 260px;
+    object-fit: contain;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    background: #fafafa;
+    border: 1px solid var(--border);
+    display: none;
+  }
+  .modal-preview.show { display: block; }
+  .modal-actions { display: flex; flex-direction: column; gap: 10px; }
+  .modal-actions button {
+    width: 100%;
+    padding: 12px;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .modal-cancel {
+    text-align: center;
+    margin-top: 10px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+  .modal-cancel:hover { color: var(--text); }
+  footer {
+    text-align: center;
+    padding: 20px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  footer strong { color: var(--info); }
+  .hidden-input { display: none; }
+  @media print {
+    .controls, .add-row, .remove-btn, button, .auto-save-indicator { display: none !important; }
+    body { background: white; }
+    .category { box-shadow: none; border: 1px solid #ccc; }
+    header { background: white !important; color: black !important; border: 2px solid #2e7d32; }
+  }
+  @media (max-width: 640px) {
+    td.unit-cell { display: none; }
+    thead th.unit-th { display: none; }
+    header h1 { font-size: 1.4rem; }
+    td input { font-size: 0.85rem; padding: 4px 6px; }
+    .photo-thumb, .photo-placeholder { width: 38px; height: 38px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>🛒 Lista de Feira Mensal</h1>
+  <p>Controle seus gastos com mercado — edite quantidades, preços, adicione fotos e marque o que já comprou.</p>
+  <div class="month-selector">
+    <label for="monthInput" style="font-size: 0.9rem;">Mês de referência:</label>
+    <input type="month" id="monthInput">
+    <label style="font-size: 0.9rem; margin-left: 8px;">Orçamento previsto: R$</label>
+    <input type="number" id="budgetInput" step="0.01" min="0" placeholder="0,00" style="width: 110px;">
+  </div>
+</header>
+
+<div class="summary">
+  <div class="stat-card">
+    <div class="label">Itens na lista</div>
+    <div class="value" id="totalItems">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Já comprados</div>
+    <div class="value" id="purchasedItems">0</div>
+  </div>
+  <div class="stat-card total">
+    <div class="label">Total estimado</div>
+    <div class="value" id="totalEstimated">R$ 0,00</div>
+  </div>
+  <div class="stat-card spent">
+    <div class="label">Total gasto (comprados)</div>
+    <div class="value" id="totalSpent">R$ 0,00</div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn-info" onclick="exportBackup()">💾 Salvar Backup</button>
+  <button class="btn-info" onclick="document.getElementById('fileInput').click()">📂 Restaurar Backup</button>
+  <input type="file" id="fileInput" accept=".json" class="hidden-input" onchange="importBackup(event)">
+  <button class="btn-primary" onclick="exportCSV()">📥 Exportar CSV</button>
+  <button class="btn-secondary" onclick="window.print()">🖨️ Imprimir</button>
+  <button class="btn-secondary" onclick="resetCheckboxes()">🔄 Desmarcar comprados</button>
+  <button class="btn-danger" onclick="resetAll()">🗑️ Limpar tudo</button>
+</div>
+
+<div id="categories"></div>
+
+<!-- Modal de imagem -->
+<div class="modal-backdrop" id="photoModal">
+  <div class="modal">
+    <h3 id="photoModalTitle">Foto do item</h3>
+    <p id="photoModalSubtitle">Tire uma foto ou escolha da galeria.</p>
+    <img id="photoModalPreview" class="modal-preview" alt="Pré-visualização">
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="triggerCamera()">📷 Tirar foto</button>
+      <button class="btn-info" onclick="triggerGallery()">🖼️ Escolher da galeria</button>
+      <button class="btn-danger" id="removePhotoBtn" onclick="removePhoto()" style="display:none;">🗑️ Remover foto</button>
+    </div>
+    <div class="modal-cancel" onclick="closePhotoModal()">Cancelar</div>
+  </div>
+</div>
+
+<input type="file" id="cameraInput" class="hidden-input" accept="image/*" capture="environment" onchange="handlePhotoUpload(event)">
+<input type="file" id="galleryInput" class="hidden-input" accept="image/*" onchange="handlePhotoUpload(event)">
+
+<div class="auto-save-indicator" id="autoSaveIndicator">✓ Salvo</div>
+
+<footer>
+  💾 Os dados são salvos automaticamente no seu navegador. <strong>Faça backup periódico</strong> clicando em "Salvar Backup" para não perder seus dados se trocar de navegador, dispositivo ou limpar o cache.
+</footer>
+
+</div>
+
+<script>
+const DEFAULT_DATA = {
+  "Alimentos básicos (mercearia)": {
+    icon: "🍚",
+    items: [
+      { name: "Arroz branco 1kg", qty: 2, unit: "pct", price: 3.40 },
+      { name: "Feijão carioca 1kg", qty: 0, unit: "kg", price: 9.50 },
+      { name: "Óleo de soja 900ml", qty: 2, unit: "un", price: 7.80 },
+      { name: "Açúcar refinado 1kg", qty: 3, unit: "kg", price: 3.50 },
+      { name: "Café torrado 500g", qty: 2, unit: "pct", price: 17.00 },
+      { name: "Macarrão espaguete 500g", qty: 4, unit: "pct", price: 3.25 },
+      { name: "Farinha de trigo 1kg", qty: 0, unit: "kg", price: 6.50 },
+      { name: "Sal refinado 1kg", qty: 1, unit: "kg", price: 2.00 },
+      { name: "Molho de tomate 340g", qty: 6, unit: "un", price: 2.50 },
+      { name: "Biscoito recheado", qty: 0, unit: "pct", price: 4.50 },
+      { name: "Salgadinhos", qty: 10, unit: "un", price: 1.49 },
+      { name: "Bolacha Maria", qty: 1, unit: "un", price: 5.00 },
+      { name: "Bolacha creme cracker", qty: 1, unit: "un", price: 4.50 },
+      { name: "Farofa Yoki", qty: 1, unit: "un", price: 17.00 },
+      { name: "Farinha de mandioca", qty: 1, unit: "kg", price: 7.00 },
+      { name: "Milho de pipoca", qty: 1, unit: "un", price: 3.00 },
+      { name: "Chá", qty: 1, unit: "un", price: 3.50 },
+      { name: "Leite condensado", qty: 1, unit: "un", price: 6.00 },
+      { name: "Creme de leite", qty: 1, unit: "un", price: 4.50 },
+      { name: "", qty: 1, unit: "un", price: 0 },
+      { name: "", qty: 1, unit: "un", price: 0 }
+    ]
+  },
+  "Hortifruti (frutas, verduras, legumes)": {
+    icon: "🥬",
+    items: [
+      { name: "Banana", qty: 2, unit: "kg", price: 6.00 },
+      { name: "Maçã", qty: 1, unit: "kg", price: 9.00 },
+      { name: "Tomate", qty: 1, unit: "kg", price: 8.50 },
+      { name: "Cebola", qty: 1, unit: "kg", price: 6.00 },
+      { name: "Batata", qty: 2, unit: "kg", price: 7.50 },
+      { name: "Alho", qty: 1, unit: "cab", price: 4.00 },
+      { name: "Alface", qty: 2, unit: "un", price: 3.50 },
+      { name: "Cenoura", qty: 1, unit: "kg", price: 5.50 },
+      { name: "Limão", qty: 1, unit: "kg", price: 5.00 },
+      { name: "", qty: 1, unit: "un", price: 0 },
+      { name: "", qty: 1, unit: "un", price: 0 }
+    ]
+  },
+  "Carnes, frios e laticínios": {
+    icon: "🥩",
+    items: [
+      { name: "Carne bovina (patinho)", qty: 2, unit: "kg", price: 39.90 },
+      { name: "Frango (peito)", qty: 4, unit: "kg", price: 31.00 },
+      { name: "Linguiça calabresa", qty: 0, unit: "kg", price: 28.00 },
+      { name: "Ovos (unidade)", qty: 60, unit: "un", price: 1.00 },
+      { name: "Leite integral 1L", qty: 0, unit: "L", price: 5.50 },
+      { name: "Queijo mussarela", qty: 0.5, unit: "kg", price: 45.00 },
+      { name: "Presunto fatiado", qty: 0.3, unit: "kg", price: 38.00 },
+      { name: "Iogurte natural", qty: 4, unit: "un", price: 4.50 },
+      { name: "Manteiga 200g", qty: 1, unit: "un", price: 12.00 },
+      { name: "Carne de Sol", qty: 2, unit: "un", price: 41.90 },
+      { name: "Acém", qty: 1, unit: "un", price: 30.00 },
+      { name: "", qty: 1, unit: "un", price: 0 },
+      { name: "", qty: 1, unit: "un", price: 0 }
+    ]
+  },
+  "Limpeza e higiene": {
+    icon: "🧼",
+    items: [
+      { name: "Detergente líquido", qty: 2, unit: "un", price: 2.80 },
+      { name: "Sabão em pó 1kg", qty: 0, unit: "pct", price: 14.50 },
+      { name: "Amaciante 2L", qty: 1, unit: "un", price: 12.00 },
+      { name: "Água sanitária 2L", qty: 3, unit: "un", price: 7.50 },
+      { name: "Papel higiênico 12 rolos", qty: 1, unit: "pct", price: 17.00 },
+      { name: "Pasta de dente", qty: 2, unit: "un", price: 6.50 },
+      { name: "Sabonete", qty: 0, unit: "un", price: 3.20 },
+      { name: "Shampoo", qty: 0, unit: "un", price: 18.00 },
+      { name: "Desodorante", qty: 1, unit: "un", price: 15.00 },
+      { name: "Esponja de aço", qty: 0, unit: "pct", price: 4.50 },
+      { name: "Esponja de Prato", qty: 1, unit: "un", price: 7.00 },
+      { name: "Esponja de Banheiro", qty: 0, unit: "un", price: 0 },
+      { name: "Lava roupas líquido 5L", qty: 1, unit: "un", price: 24.00 },
+      { name: "Sabão Líquido de Lis 900ml", qty: 2, unit: "un", price: 13.00 },
+      { name: "Desinfetante", qty: 0, unit: "un", price: 15.00 },
+      { name: "", qty: 1, unit: "un", price: 0 },
+      { name: "", qty: 1, unit: "un", price: 0 }
+    ]
+  }
+};
+
+const STORAGE_KEY = "feira_mensal_v2";
+const LEGACY_STORAGE_KEY = "feira_mensal_v1";
+const BUDGET_KEY = "feira_mensal_budget";
+const MONTH_KEY = "feira_mensal_month";
+
+let data = loadData();
+let activePhotoTarget = null; // { cat, idx }
+
+function loadData() {
+  try {
+    let saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) {
+      // Migra do v1 (sem campo image) pro v2 (com image)
+      saved = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        Object.values(parsed).forEach(c => c.items.forEach(it => { if (!("image" in it)) it.image = ""; }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        return parsed;
+      }
+    } else {
+      return JSON.parse(saved);
+    }
+  } catch (e) { console.warn("Erro ao carregar dados:", e); }
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+
+function saveData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    showSaveIndicator();
+  } catch (e) {
+    if (e.name === "QuotaExceededError" || e.code === 22) {
+      alert("⚠️ Espaço de armazenamento do navegador cheio.\n\nIsso geralmente acontece quando há muitas fotos. Sugestões:\n• Remova algumas fotos pesadas\n• Faça um backup (botão 💾) e use ele em outro dispositivo");
+    } else {
+      console.warn("Erro ao salvar:", e);
+    }
+  }
+}
+
+function showSaveIndicator() {
+  const ind = document.getElementById("autoSaveIndicator");
+  ind.classList.add("show");
+  clearTimeout(showSaveIndicator._t);
+  showSaveIndicator._t = setTimeout(() => ind.classList.remove("show"), 1200);
+}
+
+function fmtBRL(v) {
+  return "R$ " + (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function render() {
+  const container = document.getElementById("categories");
+  container.innerHTML = "";
+  let totalItems = 0, purchasedItems = 0, totalEstimated = 0, totalSpent = 0;
+
+  Object.entries(da
